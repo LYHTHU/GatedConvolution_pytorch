@@ -1,1 +1,1 @@
-python3 test_images.py config/test_places2_sa_l2h_unet_perc.yml
+python test_images.py config/test_places2_sagan.yml
