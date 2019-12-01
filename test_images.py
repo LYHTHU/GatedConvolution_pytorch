@@ -28,7 +28,7 @@ log_dir = 'model_logs/test_{}_{}'.format(time_stamp, config.LOG_DIR)
 result_dir = 'result_logs/{}'.format(config.MODEL_RESTORE[:config.MODEL_RESTORE.find('/')])
 #tensorboardlogger = TensorBoardLogger(log_dir)
 cuda0 = torch.device('cuda:{}'.format(config.GPU_IDS[0]))
-cuda1 = torch.device('cuda:{}'.format(config.GPU_IDS[1]))
+cuda1 = torch.device('cuda:{}'.format(config.GPU_IDS[0]))
 cpu0 = torch.device('cpu')
 TRAIN_SIZES = ((64,64),(128,128),(256,256))
 SIZES_TAGS = ("64x64", "128x128", "256x256")
@@ -48,7 +48,7 @@ def logger_init():
 def img2photo(imgs):
     return ((imgs+1)*127.5).transpose(1,2).transpose(2,3).detach().cpu().numpy()
 
-def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(cuda0,cuda1), batch_n="whole_test_show"):
+def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(cuda0), batch_n="whole_test_show"):
     """
     validate phase
     """
