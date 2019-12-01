@@ -20,6 +20,8 @@ import time
 import sys
 import os
 
+# logger.info => print
+
 # python train inpaint.yml
 config = Config(sys.argv[1])
 logger = logging.getLogger(__name__)
@@ -170,7 +172,7 @@ def main():
     batch_size = config.BATCH_SIZE
 
     # Dataset setting
-    logger.info("Initialize the dataset...")
+    print("Initialize the dataset...")
     val_dataset = InpaintDataset(config.DATA_FLIST[dataset_type][1],\
                                     {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][1] for mask_type in ('val',)}, \
                                     resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
@@ -182,10 +184,10 @@ def main():
 
     ### Generate a new val data
 
-    logger.info("Finish the dataset initialization.")
+    print("Finish the dataset initialization.")
 
     # Define the Network Structure
-    logger.info("Define the Network Structure and Losses")
+    print("Define the Network Structure and Losses")
     whole_model_path = 'model_logs/{}'.format(config.MODEL_RESTORE)
     nets = torch.load(whole_model_path)
     netG_state_dict, netD_state_dict = nets['netG_state_dict'], nets['netD_state_dict']
@@ -203,7 +205,7 @@ def main():
 
 
     #netD.load_state_dict(netD_state_dict)
-    logger.info("Loading pretrained models from {} ...".format(config.MODEL_RESTORE))
+    print("Loading pretrained models from {} ...".format(config.MODEL_RESTORE))
 
     # Define loss
     recon_loss = ReconLoss(*(config.L1_LOSS_ALPHA))
@@ -233,10 +235,10 @@ def main():
         "optD":optD,
 
     }
-    logger.info("Finish Define the Network Structure and Losses")
+    print("Finish Define the Network Structure and Losses")
 
     # Start Training
-    logger.info("Start Validation")
+    print("Start Validation")
 
     validate(nets, losses, opts, val_loader,0 , config.NETWORK_TYPE,devices=(cuda0,cuda1))
 
