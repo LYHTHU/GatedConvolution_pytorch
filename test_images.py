@@ -50,14 +50,14 @@ def logger_init():
 def img2photo(imgs):
     return ((imgs+1)*127.5).transpose(1,2).transpose(2,3).detach().cpu().numpy()
 
-def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(cuda0), batch_n="whole_test_show"):
+def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(cuda0, cuda0), batch_n="whole_test_show"):
     """
     validate phase
     """
     netD, netG = nets["netD"], nets["netG"]
     ReconLoss, DLoss, PercLoss, GANLoss, StyleLoss = loss_terms['ReconLoss'], loss_terms['DLoss'], loss_terms["PercLoss"], loss_terms["GANLoss"], loss_terms["StyleLoss"]
     optG, optD = opts['optG'], opts['optD']
-    device0, device1 = devices
+    device0, device0 = devices
     netG.to(device0)
     netD.to(device0)
     netG.eval()
@@ -125,7 +125,7 @@ def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(c
 
             r_loss = ReconLoss(imgs, recon_imgs, recon_imgs, masks)
 
-            imgs, recon_imgs, complete_imgs = imgs.to(device1), recon_imgs.to(device1), complete_imgs.to(device1)
+            imgs, recon_imgs, complete_imgs = imgs.to(device0), recon_imgs.to(device0), complete_imgs.to(device0)
             p_loss = PercLoss(imgs, recon_imgs) + PercLoss(imgs, complete_imgs)
             s_loss = StyleLoss(imgs, recon_imgs) + StyleLoss(imgs, complete_imgs)
             p_loss, s_loss = p_loss.to(device0), s_loss.to(device0)
@@ -210,8 +210,8 @@ def main():
     # Define loss
     recon_loss = ReconLoss(*(config.L1_LOSS_ALPHA))
     gan_loss = SNGenLoss(config.GAN_LOSS_ALPHA)
-    perc_loss = PerceptualLoss(weight=config.PERC_LOSS_ALPHA,feat_extractors = netVGG.to(cuda1))
-    style_loss = StyleLoss(weight=config.STYLE_LOSS_ALPHA, feat_extractors = netVGG.to(cuda1))
+    perc_loss = PerceptualLoss(weight=config.PERC_LOSS_ALPHA,feat_extractors = netVGG.to(cuda0))
+    style_loss = StyleLoss(weight=config.STYLE_LOSS_ALPHA, feat_extractors = netVGG.to(cuda0))
     dis_loss = SNDisLoss()
     lr, decay = config.LEARNING_RATE, config.WEIGHT_DECAY
     optG = torch.optim.Adam(netG.parameters(), lr=lr, weight_decay=decay)
@@ -240,7 +240,7 @@ def main():
     # Start Training
     print("Start Validation")
 
-    validate(nets, losses, opts, val_loader,0 , config.NETWORK_TYPE,devices=(cuda0,cuda1))
+    validate(nets, losses, opts, val_loader,0 , config.NETWORK_TYPE,devices=(cuda0,cuda0))
 
 if __name__ == '__main__':
     main()
