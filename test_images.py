@@ -60,6 +60,7 @@ def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(c
     device0, device0 = devices
     netG.to(device0)
     netD.to(device0)
+
     netG.eval()
     netD.eval()
     batch_time = AverageMeter()
@@ -73,6 +74,7 @@ def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(c
     val_save_real_dir = os.path.join(val_save_dir, "real")
     val_save_gen_dir = os.path.join(val_save_dir, "gen")
     val_save_comp_dir = os.path.join(val_save_dir, "comp")
+
     for size in SIZES_TAGS:
         if not os.path.exists(os.path.join(val_save_real_dir, size)):
             os.makedirs(os.path.join(val_save_real_dir, size))
@@ -80,9 +82,14 @@ def validate(nets, loss_terms, opts, dataloader, epoch, network_type, devices=(c
             os.makedirs(os.path.join(val_save_gen_dir, size))
         if not os.path.exists(os.path.join(val_save_comp_dir, size)):
             os.makedirs(os.path.join(val_save_comp_dir, size))
+
+    print(len(dataloader.dataset))
+
     info = {}
     t = 0
+    print("start")
     for i, (ori_imgs, ori_masks) in enumerate(dataloader):
+        print(i)
         data_time.update(time.time() - end)
         pre_imgs = ori_imgs
         pre_complete_imgs = (pre_imgs / 127.5 - 1)
@@ -179,7 +186,7 @@ def main():
                                     random_bbox_margin=config.RANDOM_BBOX_MARGIN,
                                     random_ff_setting=config.RANDOM_FF_SETTING)
     val_loader = val_dataset.loader(batch_size=1, shuffle=False,
-                                        num_workers=1)
+                                        num_workers=8)
     #print(len(val_loader))
 
     ### Generate a new val data
@@ -240,7 +247,7 @@ def main():
     # Start Training
     print("Start Validation")
 
-    validate(nets, losses, opts, val_loader,0 , config.NETWORK_TYPE,devices=(cuda0,cuda0))
+    validate(nets, losses, opts, val_loader, 0 , config.NETWORK_TYPE,devices=(cuda0,cuda0))
 
 if __name__ == '__main__':
     main()
