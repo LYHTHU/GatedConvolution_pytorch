@@ -74,8 +74,14 @@ class InpaintDataset(BaseDataset):
         #         error = 1
 
         # TODO: infinate loop
-        img = self.transforms_fun(self.read_img(img_path))
-
+        img = None
+        while(True):
+            try:
+                img = self.transforms_fun(self.read_img(img_path))
+                break;
+            except:
+                index = np.random.randint(0, high=len(self))
+                img_path = self.img_paths[index]
         # while True:
         #     try:
         #         img = self.transforms_fun(self.read_img(img_path))
