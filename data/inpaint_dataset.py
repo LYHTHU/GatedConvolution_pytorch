@@ -61,18 +61,28 @@ class InpaintDataset(BaseDataset):
 
     def __getitem__(self, index):
         # create the paths for images and masks
-        print(index)
         img_path = self.img_paths[index]
-        error = 1
+        error = 0
         # TODO: understand this part.
-        while not os.path.isfile(img_path) or error == 1:
-            try:
-                img = self.transforms_fun(self.read_img(img_path))
-                error = 0
-            except:
-                index = np.random.randint(0, high=len(self))
-                img_path = self.img_paths[index]
-                error = 1
+        # while not os.path.isfile(img_path) or error == 1:
+        #     try:
+        #         img = self.transforms_fun(self.read_img(img_path))
+        #         error = 0
+        #     except:
+        #         index = np.random.randint(0, high=len(self))
+        #         img_path = self.img_paths[index]
+        #         error = 1
+
+        # TODO: infinate loop
+        img = self.transforms_fun(self.read_img(img_path))
+
+        # while True:
+        #     try:
+        #         img = self.transforms_fun(self.read_img(img_path))
+        #         break
+        #     except Exception:
+        #         index = np.random.randint(0, high=len(self))
+        #         img_path = self.img_paths[index]
         mask_paths = {}
         for mask_type in self.mask_paths:
             mask_paths[mask_type] = self.mask_paths[mask_type][index]
@@ -80,7 +90,7 @@ class InpaintDataset(BaseDataset):
         img = self.transforms_fun(self.read_img(img_path))
 
         masks = {mask_type:255*self.transforms_fun(self.read_mask(mask_paths[mask_type], mask_type))[:1, :,:] for mask_type in mask_paths}
-        
+
         return img*255, masks
 
     def read_img(self, path):
@@ -553,8 +563,8 @@ if __name__ == "__main__":
                                         random_bbox_margin=config.RANDOM_BBOX_MARGIN,
                                         random_ff_setting=config.RANDOM_FF_SETTING)
 
-    train_loader = train_dataset.loader(batch_size=1, shuffle=True, num_workers=8)
+    train_loader = train_dataset.loader(batch_size=128, shuffle=True, num_workers=8)
 
     print("Dataset lentgh = {}; Dataloader length = {}".format(len(train_dataset), len(train_loader)))
-    for i, _ in enumerate(train_loader):
-        print(i)
+    for i, data in enumerate(train_loader):
+        print(i, data[1]['random_free_form'].size())

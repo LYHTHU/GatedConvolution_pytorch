@@ -13,7 +13,7 @@ def make_img_list(path='../places365_standard', train=True):
     file_list = f.readlines()
     f.close()
     for file in file_list:
-        flist.append(os.path.join(path, file))
+        flist.append(os.path.join(path, file.strip()))
     return flist
             
 
