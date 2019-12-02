@@ -4,9 +4,10 @@ import cv2
 import os
 from torchvision import transforms
 from PIL import Image
-from .base_dataset import BaseDataset, NoriBaseDataset
+from base_dataset import BaseDataset, NoriBaseDataset
 from torch.utils.data import Dataset, DataLoader
 import pickle as pkl
+from make_flist import *
 
 ALLMASKTYPES = ['bbox', 'seg', 'random_bbox', 'random_free_form', 'val']
 
@@ -25,15 +26,18 @@ class InpaintDataset(BaseDataset):
     Return:
         img, *mask
     """
-    def __init__(self, img_flist_path, mask_flist_paths_dict,
+    def __init__(self, img_path, mask_flist_paths_dict,
                 resize_shape=(256, 256), transforms_oprs=['random_crop', 'to_tensor'],
                 random_bbox_shape=(32, 32), random_bbox_margin=(64, 64),
                 random_ff_setting={'img_shape':[256,256],'mv':5, 'ma':4.0, 'ml':40, 'mbw':10}, random_bbox_number=5):
 
-        with open(img_flist_path, 'r') as f:
-            self.img_paths = f.read().splitlines()
+        # with open(img_flist_path, 'r') as f:
+        #     self.img_paths = f.read().splitlines()
+
+        self.img_paths = make_img_list(path=img_path, train=True)
 
         self.mask_paths = {}
+        # here we use 'random' as default
         for mask_type in mask_flist_paths_dict:
             #print(mask_type)
             assert mask_type in ALLMASKTYPES
@@ -57,9 +61,10 @@ class InpaintDataset(BaseDataset):
 
     def __getitem__(self, index):
         # create the paths for images and masks
-
+        print(index)
         img_path = self.img_paths[index]
         error = 1
+        # TODO: understand this part.
         while not os.path.isfile(img_path) or error == 1:
             try:
                 img = self.transforms_fun(self.read_img(img_path))
@@ -68,7 +73,6 @@ class InpaintDataset(BaseDataset):
                 index = np.random.randint(0, high=len(self))
                 img_path = self.img_paths[index]
                 error = 1
-
         mask_paths = {}
         for mask_type in self.mask_paths:
             mask_paths[mask_type] = self.mask_paths[mask_type][index]
@@ -76,7 +80,7 @@ class InpaintDataset(BaseDataset):
         img = self.transforms_fun(self.read_img(img_path))
 
         masks = {mask_type:255*self.transforms_fun(self.read_mask(mask_paths[mask_type], mask_type))[:1, :,:] for mask_type in mask_paths}
-
+        
         return img*255, masks
 
     def read_img(self, path):
@@ -398,7 +402,7 @@ class InpaintPairDataset(BaseDataset):
                 index = np.random.randint(0, high=len(self))
                 img_path = self.img_paths[index]
                 error = 1
-
+        
         while not os.path.isfile(img_ex_path) or error == 1:
             try:
                 img_ex = self.transforms_fun(self.read_img(img_ex_path))
@@ -532,3 +536,25 @@ class NoriInpaintDataset(NoriBaseDataset):
         masks = {mask_type:self.transforms_fun(self.read_mask(mask_paths[mask_type], mask_type)) for mask_type in mask_paths}
 
         return img, masks, self.img_cls_ids[index]
+
+
+if __name__ == "__main__":
+    import sys 
+    sys.path.append("..") 
+    from util.config import Config
+    config = Config('../config/inpaint_places2_sagan.yml')
+    mask_flist_paths_dict = {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][0] for mask_type in config.MASK_TYPES}
+    mask_flist_paths_dict = {'random_free_form': None}
+    print(mask_flist_paths_dict)
+
+    train_dataset = InpaintDataset(img_path='../../places365_standard',\
+                                        mask_flist_paths_dict=mask_flist_paths_dict, \
+                                        resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
+                                        random_bbox_margin=config.RANDOM_BBOX_MARGIN,
+                                        random_ff_setting=config.RANDOM_FF_SETTING)
+
+    train_loader = train_dataset.loader(batch_size=1, shuffle=True, num_workers=8)
+
+    print("Dataset lentgh = {}; Dataloader length = {}".format(len(train_dataset), len(train_loader)))
+    for i, _ in enumerate(train_loader):
+        print(i)
