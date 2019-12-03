@@ -173,7 +173,8 @@ def train(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoch, 
         imgs = (imgs / 127.5 - 1)
         # mask is 1 on masked region
 
-        coarse_imgs, recon_imgs, attention = netG(imgs, masks)
+        # coarse_imgs, recon_imgs, attention = netG(imgs, masks)
+        coarse_imgs, recon_imgs = netG(imgs, masks)
         #print(attention.size(), )
         complete_imgs = recon_imgs * masks + imgs * (1 - masks)
 
