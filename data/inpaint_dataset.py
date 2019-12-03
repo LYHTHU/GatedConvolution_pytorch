@@ -8,6 +8,9 @@ from .base_dataset import BaseDataset, NoriBaseDataset
 from torch.utils.data import Dataset, DataLoader
 import pickle as pkl
 from .make_flist import *
+from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, RandomSampler
+import numpy as np
+
 
 ALLMASKTYPES = ['bbox', 'seg', 'random_bbox', 'random_free_form', 'val']
 
@@ -326,6 +329,15 @@ class InpaintWithFileDataset(Dataset):
     def loader(self, **args):
         return DataLoader(dataset=self, **args)
 
+    def get_sampler(self, ratio):
+        num_train = len(self)
+        indices = list(range(num_train))
+        split = int(np.floor((ratio) * len(indices)))
+        np.random.shuffle(indices)
+        train_idx = indices[:split]
+        train_sampler = SubsetRandomSampler(train_idx)
+        return train_sampler
+
     def __getitem__(self, index):
         img_path = self.img_paths[index]
         #print(img_path)
@@ -558,6 +570,8 @@ if __name__ == "__main__":
     import sys 
     sys.path.append("..") 
     from util.config import Config
+    from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, RandomSampler
+
     config = Config('../config/inpaint_places2_sagan.yml')
     mask_flist_paths_dict = {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][0] for mask_type in config.MASK_TYPES}
     # mask_flist_paths_dict = {'random_free_form': None}
@@ -569,7 +583,16 @@ if __name__ == "__main__":
                                         random_bbox_margin=config.RANDOM_BBOX_MARGIN,
                                         random_ff_setting=config.RANDOM_FF_SETTING)
 
-    train_loader = train_dataset.loader(batch_size=128, shuffle=True, num_workers=8)
+    # valid_size = 0.05
+    # num_train = len(train_dataset)
+    # indices = list(range(num_train))
+    # split = int(np.floor((valid_size) * len(indices)))
+    # np.random.shuffle(indices)
+    # train_idx = indices[:split]
+
+    train_sampler = train_dataset.get_sampler(0.05)
+
+    train_loader = train_dataset.loader(batch_size=128, sampler=train_sampler, num_workers=8)
 
     print("Dataset lentgh = {}; Dataloader length = {}".format(len(train_dataset), len(train_loader)))
     for i, data in enumerate(train_loader):

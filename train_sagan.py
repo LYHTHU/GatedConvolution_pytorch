@@ -260,7 +260,7 @@ def main():
                                       resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
                                       random_bbox_margin=config.RANDOM_BBOX_MARGIN,
                                       random_ff_setting=config.RANDOM_FF_SETTING)
-    train_loader = train_dataset.loader(batch_size=batch_size, shuffle=True,
+    train_loader = train_dataset.loader(batch_size=batch_size, sampler=train_dataset.get_sampler(ratio=0.1),
                                             num_workers=16,pin_memory=True)
 
    

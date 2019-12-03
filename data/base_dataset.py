@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
+import numpy as np
+from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, RandomSampler
 #import nori2 as nori
 
 """
@@ -37,6 +39,15 @@ class BaseDataset(Dataset):
 
     def loader(self, **args):
         return DataLoader(dataset=self, **args)
+    
+    def get_sampler(self, ratio):
+        num_train = len(self)
+        indices = list(range(num_train))
+        split = int(np.floor((ratio) * len(indices)))
+        np.random.shuffle(indices)
+        train_idx = indices[:split]
+        train_sampler = SubsetRandomSampler(train_idx)
+        return train_sampler
 
     @staticmethod
     def read_img(path):
