@@ -18,7 +18,11 @@ import sys
 import os
 
 # python train inpaint.yml
-config = Config(sys.argv[1])
+if len(sys.argv) > 1:
+    config = Config(sys.argv[1])
+else:
+    config = Config('config/inpaint_places2_sagan.yml')
+
 logger = logging.getLogger(__name__)
 time_stamp = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
 log_dir = 'model_logs/{}_{}'.format(time_stamp, config.LOG_DIR)
@@ -117,7 +121,7 @@ def validate(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoc
             info['val/whole_imgs/{}'.format(i)] = img2photo(torch.cat([ imgs * (1 - masks), coarse_imgs, recon_imgs, imgs, complete_imgs], dim=3))
 
         else:
-            logger.info("Validation Epoch {0}, [{1}/{2}]: Batch Time:{batch_time.val:.4f},\t Data Time:{data_time.val:.4f},\t Whole Gen Loss:{whole_loss.val:.4f}\t,"
+            print("Validation Epoch {0}, [{1}/{2}]: Batch Time:{batch_time.val:.4f},\t Data Time:{data_time.val:.4f},\t Whole Gen Loss:{whole_loss.val:.4f}\t,"
                         "Recon Loss:{r_loss.val:.4f},\t GAN Loss:{g_loss.val:.4f},\t D Loss:{d_loss.val:.4f}"
                         .format(epoch, i+1, len(dataloader), batch_time=batch_time, data_time=data_time, whole_loss=losses['whole_loss'], r_loss=losses['r_loss'] \
                         ,g_loss=losses['g_loss'], d_loss=losses['d_loss']))
@@ -143,7 +147,7 @@ def validate(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoc
         end = time.time()
 
 
-def train(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoch, device=cuda0, val_datas=None):
+def train(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoch, device=cuda0):
     """
     Train Phase, for training and spectral normalization patch gan in
     Free-Form Image Inpainting with Gated Convolution (snpgan)
@@ -209,7 +213,7 @@ def train(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoch, 
 
         if (i+1) % config.SUMMARY_FREQ == 0:
             # Logger logging
-            logger.info("Epoch {0}, [{1}/{2}]: Batch Time:{batch_time.val:.4f},\t Data Time:{data_time.val:.4f}, Whole Gen Loss:{whole_loss.val:.4f}\t,"
+            print("Epoch {0}, [{1}/{2}]: Batch Time:{batch_time.val:.4f},\t Data Time:{data_time.val:.4f}, Whole Gen Loss:{whole_loss.val:.4f}\t,"
                         "Recon Loss:{r_loss.val:.4f},\t GAN Loss:{g_loss.val:.4f},\t D Loss:{d_loss.val:.4f}" \
                         .format(epoch, i+1, len(dataloader), batch_time=batch_time, data_time=data_time, whole_loss=losses['whole_loss'], r_loss=losses['r_loss'] \
                         ,g_loss=losses['g_loss'], d_loss=losses['d_loss']))
@@ -234,12 +238,12 @@ def train(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, dataloader, epoch, 
 
             for tag, images in info.items():
                 tensorboardlogger.image_summary(tag, images, epoch*len(dataloader)+i)
-        if (i+1) % config.VAL_SUMMARY_FREQ == 0 and val_datas is not None:
+        # if (i+1) % config.VAL_SUMMARY_FREQ == 0 and val_datas is not None:
 
-            validate(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, val_datas , epoch, device, batch_n=i)
-            netG.train()
-            netD.train()
-        end = time.time()
+        #     validate(netG, netD, GANLoss, ReconLoss, DLoss, optG, optD, val_datas , epoch, device, batch_n=i)
+        #     netG.train()
+        #     netD.train()
+        # end = time.time()
 
 def main():
     logger_init()
@@ -247,43 +251,46 @@ def main():
     batch_size = config.BATCH_SIZE
 
     # Dataset setting
-    logger.info("Initialize the dataset...")
-    train_dataset = InpaintDataset(config.DATA_FLIST[dataset_type][0],\
-                                      {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][0] for mask_type in config.MASK_TYPES}, \
+    print("Initialize the dataset...")
+    
+    # img_path=config.DATA_FLIST[dataset_type][0]
+    train_dataset = InpaintDataset(img_path='../places365_standard',\
+                                      mask_flist_paths_dict={mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][0] for mask_type in config.MASK_TYPES}, \
                                       resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
                                       random_bbox_margin=config.RANDOM_BBOX_MARGIN,
                                       random_ff_setting=config.RANDOM_FF_SETTING)
     train_loader = train_dataset.loader(batch_size=batch_size, shuffle=True,
                                             num_workers=16,pin_memory=True)
 
-    val_dataset = InpaintDataset(config.DATA_FLIST[dataset_type][1],\
-                                    {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][1] for mask_type in ('val',)}, \
-                                    resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
-                                    random_bbox_margin=config.RANDOM_BBOX_MARGIN,
-                                    random_ff_setting=config.RANDOM_FF_SETTING)
-    val_loader = val_dataset.loader(batch_size=1, shuffle=False,
-                                        num_workers=1)
+   
     #print(len(val_loader))
 
     ### Generate a new val data
-    val_datas = []
-    j = 0
-    for i, data in enumerate(val_loader):
-        if j < config.STATIC_VIEW_SIZE:
-            imgs = data[0]
-            if imgs.size(1) == 3:
-                val_datas.append(data)
-                j += 1
-        else:
-            break
-    #val_datas = [(imgs, masks) for imgs, masks in val_loader]
-
+    # img_path=config.DATA_FLIST[dataset_type][1]
+    val_dataset = InpaintDataset(img_path='../places365_standard',\
+                                    mask_flist_paths_dict={mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][1] for mask_type in ('val',)}, \
+                                    resize_shape=tuple(config.IMG_SHAPES), random_bbox_shape=config.RANDOM_BBOX_SHAPE, \
+                                    random_bbox_margin=config.RANDOM_BBOX_MARGIN,
+                                    random_ff_setting=config.RANDOM_FF_SETTING,  train=False)
     val_loader = val_dataset.loader(batch_size=1, shuffle=False,
                                         num_workers=1)
-    logger.info("Finish the dataset initialization.")
+    # val_datas = []
+    # j = 0
+    # for i, data in enumerate(val_loader):
+    #     if j < config.STATIC_VIEW_SIZE:
+    #         imgs = data[0]
+    #         if imgs.size(1) == 3:
+    #             val_datas.append(data)
+    #             j += 1
+    #     else:
+    #         break
+    # val_datas = [(imgs, masks) for imgs, masks in val_loader]
+
+    
+    print("Finish the dataset initialization.")
 
     # Define the Network Structure
-    logger.info("Define the Network Structure and Losses")
+    print("Define the Network Structure and Losses")
     netG = InpaintSANet()
     netD = InpaintSADirciminator()
 
@@ -293,7 +300,7 @@ def main():
         netG_state_dict, netD_state_dict = nets['netG_state_dict'], nets['netD_state_dict']
         netG.load_state_dict(netG_state_dict)
         netD.load_state_dict(netD_state_dict)
-        logger.info("Loading pretrained models from {} ...".format(config.MODEL_RESTORE))
+        print("Loading pretrained models from {} ...".format(config.MODEL_RESTORE))
 
     # Define loss
     recon_loss = ReconLoss(*(config.L1_LOSS_ALPHA))
@@ -303,17 +310,17 @@ def main():
     optG = torch.optim.Adam(netG.parameters(), lr=lr, weight_decay=decay)
     optD = torch.optim.Adam(netD.parameters(), lr=4*lr, weight_decay=decay)
 
-    logger.info("Finish Define the Network Structure and Losses")
+    print("Finish Define the Network Structure and Losses")
 
     # Start Training
-    logger.info("Start Training...")
+    print("Start Training...")
     epoch = 50
 
     for i in range(epoch):
         #validate(netG, netD, gan_loss, recon_loss, dis_loss, optG, optD, val_loader, i, device=cuda0)
 
         #train data
-        train(netG, netD, gan_loss, recon_loss, dis_loss, optG, optD, train_loader, i, device=cuda0, val_datas=val_datas)
+        train(netG, netD, gan_loss, recon_loss, dis_loss, optG, optD, train_loader, i, device=cuda0)
 
         # validate
         validate(netG, netD, gan_loss, recon_loss, dis_loss, optG, optD, val_datas, i, device=cuda0)

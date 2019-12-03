@@ -4,10 +4,10 @@ import cv2
 import os
 from torchvision import transforms
 from PIL import Image
-from base_dataset import BaseDataset, NoriBaseDataset
+from .base_dataset import BaseDataset, NoriBaseDataset
 from torch.utils.data import Dataset, DataLoader
 import pickle as pkl
-from make_flist import *
+from .make_flist import *
 
 ALLMASKTYPES = ['bbox', 'seg', 'random_bbox', 'random_free_form', 'val']
 
@@ -29,12 +29,12 @@ class InpaintDataset(BaseDataset):
     def __init__(self, img_path, mask_flist_paths_dict,
                 resize_shape=(256, 256), transforms_oprs=['random_crop', 'to_tensor'],
                 random_bbox_shape=(32, 32), random_bbox_margin=(64, 64),
-                random_ff_setting={'img_shape':[256,256],'mv':5, 'ma':4.0, 'ml':40, 'mbw':10}, random_bbox_number=5):
+                random_ff_setting={'img_shape':[256,256],'mv':5, 'ma':4.0, 'ml':40, 'mbw':10}, random_bbox_number=5, train=True):
 
         # with open(img_flist_path, 'r') as f:
         #     self.img_paths = f.read().splitlines()
 
-        self.img_paths = make_img_list(path=img_path, train=True)
+        self.img_paths = make_img_list(path=img_path, train=train)
 
         self.mask_paths = {}
         # here we use 'random' as default
@@ -560,7 +560,7 @@ if __name__ == "__main__":
     from util.config import Config
     config = Config('../config/inpaint_places2_sagan.yml')
     mask_flist_paths_dict = {mask_type:config.DATA_FLIST[config.MASKDATASET][mask_type][0] for mask_type in config.MASK_TYPES}
-    mask_flist_paths_dict = {'random_free_form': None}
+    # mask_flist_paths_dict = {'random_free_form': None}
     print(mask_flist_paths_dict)
 
     train_dataset = InpaintDataset(img_path='../../places365_standard',\
